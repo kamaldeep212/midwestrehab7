@@ -54,10 +54,6 @@ function applyTheme(text) {
   out = out.replace(/(<footer[\s\S]*?)color: #7F4D3E/gi, (_, p) => p + 'color: ' + PALETTE.highlight);
   out = out.replace(/(min-height: 92vh[\s\S]{0,4000}?)color: #7F4D3E/gi, (_, p) => p + 'color: ' + PALETTE.highlight);
   out = out.replace(
-    /(text-transform: uppercase; color: )#7F4D3E(; font-weight: 600">Property Solutions)/g,
-    '$1' + PALETTE.highlight + '$2'
-  );
-  out = out.replace(
     /(font-weight: 800; color: )#7F4D3E(; line-height: 1">10\+)/g,
     '$1' + PALETTE.highlight + '$2'
   );
@@ -99,6 +95,37 @@ function applyTheme(text) {
   return out;
 }
 
+function patchHeaderScroll(text) {
+  let out = text;
+
+  // Header tagline must adapt when sticky header background turns white on scroll
+  const headerTagline =
+    '<span style="font-size: 10.5px; letter-spacing: 2.2px; text-transform: uppercase; color: #7F4D3E; font-weight: 600">Property Solutions</span>';
+  const headerTaglineReactive =
+    '<span style="font-size: 10.5px; letter-spacing: 2.2px; text-transform: uppercase; color: {{ headerSubtext }}; font-weight: 600; transition: color .35s">Property Solutions</span>';
+  const taglineIdx = out.indexOf(headerTagline);
+  if (taglineIdx >= 0) {
+    out = out.slice(0, taglineIdx) + headerTaglineReactive + out.slice(taglineIdx + headerTagline.length);
+  }
+
+  out = out.replace(
+    /headerText: scrolled \? '[^']+' : '[^']+',/,
+    `headerText: scrolled ? '${PALETTE.black}' : '#ffffff',\n      headerSubtext: scrolled ? '${PALETTE.textAccent}' : '${PALETTE.accent}',`
+  );
+
+  out = out.replace(
+    /headerBg: scrolled \? 'rgba\(255,255,255,\.96\)' : 'rgba\([^']+\)',/,
+    "headerBg: scrolled ? 'rgba(255,255,255,.96)' : 'rgba(0,0,0,0)',"
+  );
+
+  out = out.replace(
+    /headerShadow: scrolled \? '0 4px 24px rgba\([^']+\)' : 'none',/,
+    "headerShadow: scrolled ? '0 4px 24px rgba(42,39,42,.1)' : 'none',"
+  );
+
+  return out;
+}
+
 function extractScript(content, type) {
   const open = '<script type="__bundler/' + type + '">';
   const start = content.indexOf(open);
@@ -125,6 +152,7 @@ function build() {
   let template = JSON.parse(templateBlock.data);
   template = template.replace(LOGO_BLOCK, LOGO_IMG).replace(LOGO_BLOCK_COMPACT, LOGO_IMG);
   template = applyTheme(template);
+  template = patchHeaderScroll(template);
 
   const newManifest = JSON.stringify(manifest);
   const newTemplate = safeStringify(template);
